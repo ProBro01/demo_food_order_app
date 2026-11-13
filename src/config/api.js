@@ -1,6 +1,6 @@
 // Read backend URL from frontend environment variables (.env)
 // Prefixed with VITE_ so it is accessible in Vite browser bundle
-export const BACKEND_URL = (import.meta.env.BACKEND_URL || 'http://localhost:5050').replace(/\/$/, '');
+export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'https://demo-food-order-app-ir77-c0nkf13ac-probro01s-projects.vercel.app/').replace(/\/$/, '');
 console.log('BACKEND_URL:', BACKEND_URL);
 export const API_ENDPOINTS = {
   GET_ORDER_LIST: `${BACKEND_URL}/api/getorderlist`,
