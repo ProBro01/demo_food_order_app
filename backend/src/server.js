@@ -31,7 +31,7 @@ const isOriginAllowed = (origin) => {
   if (origin.endsWith('.vercel.app')) return true; // Vercel preview & production deployments
   return false;
 };
-
+console.log('Allowed CORS origins:', allowedOrigins);
 // Enable CORS for frontend requests using FRONTEND_URL from .env
 app.use(cors({
   origin: (origin, callback) => {

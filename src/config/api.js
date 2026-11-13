@@ -12,3 +12,4 @@ export const API_ENDPOINTS = {
   CUSTOMER_ITEMS: `${BACKEND_URL}/api/customer-items`,
   REGISTER_CUSTOMER_ITEM: `${BACKEND_URL}/api/register_customer_item`
 };
+  
