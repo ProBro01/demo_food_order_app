@@ -1,0 +1,21 @@
+{
+  "name": "food-delivery-backend",
+  "version": "1.0.0",
+  "description": "Express.js backend for CraveBite Food Delivery App using Firebase Firestore",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node -e \"import('./src/config/initDatabase.js').then(m => m.initDatabase())\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "firebase-admin": "^12.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
