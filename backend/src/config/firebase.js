@@ -22,7 +22,18 @@ try {
     serviceAccountPath = path.resolve(backendRoot, serviceAccountPath);
   }
 
-  if (fs.existsSync(serviceAccountPath)) {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
+    const serviceAccount = typeof rawKey === 'string' ? JSON.parse(rawKey) : rawKey;
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    }
+    db = admin.firestore();
+    auth = admin.auth();
+    console.log(`✅ Firebase Admin initialized with service account from env (${serviceAccount.project_id}).`);
+  } else if (fs.existsSync(serviceAccountPath)) {
     const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
     
     // Check if app is not already initialized

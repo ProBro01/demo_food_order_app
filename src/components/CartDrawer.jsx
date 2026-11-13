@@ -12,7 +12,8 @@ import {
   MapPin, 
   Check, 
   Truck,
-  AlertCircle
+  AlertCircle,
+  Hash
 } from 'lucide-react';
 import { PROMO_COUPONS } from '../data/foodItems';
 
@@ -35,7 +36,10 @@ export default function CartDrawer() {
     applyCoupon,
     removeCoupon,
     placeOrder,
-    deliveryAddress
+    deliveryAddress,
+    selectedTableNumber,
+    setSelectedTableNumber,
+    TABLE_OPTIONS
   } = useCart();
 
   const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -52,12 +56,16 @@ export default function CartDrawer() {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     setIsCheckingOut(true);
-    setTimeout(() => {
+    try {
+      await placeOrder(orderNotes, selectedTableNumber);
+      setOrderNotes('');
+    } catch (err) {
+      console.error('Checkout error:', err);
+    } finally {
       setIsCheckingOut(false);
-      placeOrder(orderNotes);
-    }, 600);
+    }
   };
 
   // Free delivery progress calculation ($35 threshold)
@@ -245,6 +253,38 @@ export default function CartDrawer() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Dine-In Dining Table Selection Dropdown */}
+              <div className="bg-orange-50/70 border border-orange-200/90 rounded-2xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Hash className="w-3.5 h-3.5 text-orange-600" />
+                    Select Table Number <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-full border border-orange-200/60">
+                    Dine-In
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Select your table number so our servers deliver your food directly to your seat:
+                </p>
+                <div className="relative">
+                  <select
+                    value={selectedTableNumber}
+                    onChange={(e) => setSelectedTableNumber(e.target.value)}
+                    className="w-full pl-3.5 pr-8 py-2.5 text-xs font-bold bg-white text-slate-800 rounded-xl border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer shadow-sm appearance-none"
+                  >
+                    {TABLE_OPTIONS.map((table) => (
+                      <option key={table} value={table}>
+                        {table} (Dine-In Table)
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">
+                    ▼
+                  </div>
+                </div>
               </div>
 
               {/* Delivery Address Review */}

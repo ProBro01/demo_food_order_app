@@ -8,7 +8,8 @@ import {
   X, 
   Utensils, 
   ShieldCheck, 
-  Store
+  Store,
+  Hash
 } from 'lucide-react';
 
 export default function Navbar({ currentPath, onNavigate }) {
@@ -20,7 +21,10 @@ export default function Navbar({ currentPath, onNavigate }) {
     setSearchQuery, 
     deliveryAddress, 
     setDeliveryAddress,
-    favorites
+    favorites,
+    selectedTableNumber,
+    setSelectedTableNumber,
+    TABLE_OPTIONS
   } = useCart();
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -78,6 +82,7 @@ export default function Navbar({ currentPath, onNavigate }) {
               </button>
 
               {/* Delivery Address Pill (Customer view only) */}
+              {/* Delivery Address Pill (Customer view only) */}
               {!isAdmin && (
                 <button 
                   onClick={() => setIsAddressModalOpen(true)}
@@ -88,6 +93,28 @@ export default function Navbar({ currentPath, onNavigate }) {
                   <span className="truncate max-w-[170px] text-left">{deliveryAddress}</span>
                   <span className="text-orange-600 font-semibold text-[11px]">Edit</span>
                 </button>
+              )}
+
+              {/* Dine-In Table Selection Pill (Customer view only) */}
+              {!isAdmin && (
+                <div 
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200/90 text-slate-800 text-xs font-bold shadow-sm"
+                  title="Select your dining table number"
+                >
+                  <Hash className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                  <span className="text-orange-700 font-semibold text-[11px] uppercase tracking-wider">Table:</span>
+                  <select
+                    value={selectedTableNumber}
+                    onChange={(e) => setSelectedTableNumber(e.target.value)}
+                    className="bg-transparent text-xs font-black text-orange-950 outline-none cursor-pointer border-none p-0 pr-1 hover:text-orange-600"
+                  >
+                    {TABLE_OPTIONS.map((table) => (
+                      <option key={table} value={table} className="text-slate-800 bg-white font-medium">
+                        {table}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 

@@ -59,10 +59,15 @@ export default function OrderTrackerModal() {
             <X className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="bg-white/20 backdrop-blur-md px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">
               {activeOrder.orderId}
             </span>
+            {activeOrder.tableNumber && (
+              <span className="bg-white text-orange-600 px-3 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider shadow-sm">
+                🍽️ {activeOrder.tableNumber}
+              </span>
+            )}
             <span className="text-xs text-orange-100">
               Placed at {activeOrder.placedAt}
             </span>
@@ -149,32 +154,51 @@ export default function OrderTrackerModal() {
 
           {/* Destination Details */}
           <div className="text-xs space-y-1.5 p-3.5 bg-slate-50 rounded-2xl">
-            <div className="flex items-center gap-1.5 text-slate-700 font-bold">
-              <MapPin className="w-3.5 h-3.5 text-orange-500" />
-              <span>Delivering To</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                <span>Service Location</span>
+              </div>
+              {activeOrder.tableNumber && (
+                <span className="text-[11px] font-bold text-orange-700 bg-orange-100/80 px-2 py-0.5 rounded-full">
+                  Dine-In: {activeOrder.tableNumber}
+                </span>
+              )}
             </div>
-            <p className="text-slate-600 pl-5">{activeOrder.address}</p>
-            {activeOrder.notes && (
-              <p className="text-slate-500 pl-5 italic">Notes: "{activeOrder.notes}"</p>
+            <p className="text-slate-600 pl-5 font-medium">
+              {activeOrder.tableNumber ? `Table Service: ${activeOrder.tableNumber}` : activeOrder.address}
+            </p>
+            {(activeOrder.specialInstructions || activeOrder.notes) && (
+              <p className="text-slate-500 pl-5 italic">
+                Notes: "{activeOrder.specialInstructions || activeOrder.notes}"
+              </p>
             )}
           </div>
 
           {/* Ordered Items Summary */}
           <div>
             <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Items Ordered ({activeOrder.items.length})
+              Items Ordered ({activeOrder.items?.length || 0})
             </h5>
             <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              {activeOrder.items.map(item => (
-                <div key={item.cartItemId} className="flex justify-between text-xs py-1 border-b border-slate-100 last:border-0">
-                  <span className="text-slate-700 font-medium">
-                    <span className="font-bold text-slate-900">{item.quantity}x</span> {item.name}
-                  </span>
-                  <span className="font-bold text-slate-900">
-                    ${(item.unitPrice * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
+              {(activeOrder.items || []).map((item, idx) => {
+                const itemPrice = typeof item.price === 'number'
+                  ? item.price
+                  : (typeof item.unitPrice === 'number' ? item.unitPrice : parseFloat(item.price || item.unitPrice || 0));
+                const itemQty = item.quantity || 1;
+                const lineTotal = (itemPrice * itemQty) || 0;
+
+                return (
+                  <div key={item.cartItemId || item.id || idx} className="flex justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                    <span className="text-slate-700 font-medium">
+                      <span className="font-bold text-slate-900">{itemQty}x</span> {item.name}
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      ${lineTotal.toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -182,7 +206,9 @@ export default function OrderTrackerModal() {
         {/* Modal Action Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
           <div className="text-xs font-bold text-slate-700">
-            Total Paid: <span className="text-orange-600 font-black text-sm">${activeOrder.total.toFixed(2)}</span>
+            Total Paid: <span className="text-orange-600 font-black text-sm">
+              ${(Number(activeOrder.totalAmount ?? activeOrder.total ?? 0)).toFixed(2)}
+            </span>
           </div>
           <button
             onClick={() => setIsOrderTrackerOpen(false)}

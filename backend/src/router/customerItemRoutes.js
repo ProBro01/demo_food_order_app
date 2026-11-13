@@ -161,7 +161,7 @@ router.post('/register_customer_item', async (req, res) => {
  * @desc    Fetch all customer food items from the customer_items table in Firestore and send in JSON format
  * @access  Public / Customer / Admin
  */
-router.get('/get_customer_items', async (req, res) => {
+router.get(['/get_customer_items', '/get_customer_item'], async (req, res) => {
   try {
     if (!db) {
       console.warn('⚠️  Firestore db instance not available. Returning fallback customer items.');

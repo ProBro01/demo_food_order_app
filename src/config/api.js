@@ -4,7 +4,9 @@ export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhos
 
 export const API_ENDPOINTS = {
   GET_ORDER_LIST: `${BACKEND_URL}/api/getorderlist`,
+  REGISTER_ORDER: `${BACKEND_URL}/api/register_order`,
   GET_CUSTOMER_ITEMS: `${BACKEND_URL}/api/get_customer_items`,
+  GET_CUSTOMER_ITEM: `${BACKEND_URL}/api/get_customer_item`,
   HEALTH_CHECK: `${BACKEND_URL}/api/health`,
   SCHEMA_STATUS: `${BACKEND_URL}/api/schema/status`,
   CUSTOMER_ITEMS: `${BACKEND_URL}/api/customer-items`,

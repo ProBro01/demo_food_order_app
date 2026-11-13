@@ -12,9 +12,35 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-// Enable CORS for frontend requests
+// Read FRONTEND_URL from environment variables (.env) for CORS
+const frontendEnv = process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = frontendEnv
+  .split(',')
+  .map(url => url.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+// Ensure localhost and 127.0.0.1 are both supported if localhost is specified
+if (allowedOrigins.includes('http://localhost:3000') && !allowedOrigins.includes('http://127.0.0.1:3000')) {
+  allowedOrigins.push('http://127.0.0.1:3000');
+}
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Server-to-server, curl, Postman, Vercel health probes
+  if (allowedOrigins.includes('*')) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin.endsWith('.vercel.app')) return true; // Vercel preview & production deployments
+  return false;
+};
+
+// Enable CORS for frontend requests using FRONTEND_URL from .env
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
   credentials: true
 }));
 
@@ -111,15 +137,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start listening and run collection initialization
-app.listen(PORT, async () => {
-  console.log(`🚀 CraveBite Backend Server listening on http://localhost:${PORT}`);
-  console.log(`🩺 Health check available at: http://localhost:${PORT}/api/health`);
-  console.log(`📋 Orders API available at: http://localhost:${PORT}/api/getorderlist`);
-  console.log(`🍔 Customer Items API available at: http://localhost:${PORT}/api/get_customer_items`);
-  console.log(`🍽️  Register Item API available at: http://localhost:${PORT}/api/register_customer_item (POST)`);
-  console.log(`📊 Schema status available at: http://localhost:${PORT}/api/schema/status`);
+// Only start listening directly if not running inside a Vercel serverless environment
+if (!process.env.VERCEL) {
+  app.listen(PORT, async () => {
+    console.log(`🚀 CraveBite Backend Server listening on http://localhost:${PORT}`);
+    console.log(`🩺 Health check available at: http://localhost:${PORT}/api/health`);
+    console.log(`📋 Orders API available at: http://localhost:${PORT}/api/getorderlist`);
+    console.log(`📝 Register Order API available at: http://localhost:${PORT}/api/register_order (POST)`);
+    console.log(`🍔 Customer Items API available at: http://localhost:${PORT}/api/get_customer_items`);
+    console.log(`🍽️  Register Item API available at: http://localhost:${PORT}/api/register_customer_item (POST)`);
+    console.log(`🌐 CORS enabled for FRONTEND_URL: ${frontendEnv}`);
+    console.log(`📊 Schema status available at: http://localhost:${PORT}/api/schema/status`);
 
-  // Auto-initialize collections on startup
-  await initDatabase();
-});
+    // Auto-initialize collections on startup
+    await initDatabase();
+  });
+}
+
+// Export default app for Vercel serverless function runtime
+export default app;
+

@@ -1,9 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { PROMO_COUPONS } from '../data/foodItems';
+import { PROMO_COUPONS, FOOD_ITEMS } from '../data/foodItems';
+import { API_ENDPOINTS, BACKEND_URL } from '../config/api';
+
+export const TABLE_OPTIONS = [
+  'Table 1',
+  'Table 2',
+  'Table 3',
+  'Table 4',
+  'Table 5',
+  'Table 6',
+  'Table 7',
+  'Table 8',
+  'Table 9',
+  'Table 10',
+  'Table 11',
+  'Table 12'
+];
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
+  // Table selection state for customer dine-in orders
+  const [selectedTableNumber, setSelectedTableNumber] = useState(() => {
+    try {
+      return localStorage.getItem('cravebite_table_number') || 'Table 1';
+    } catch (e) {
+      return 'Table 1';
+    }
+  });
+
   // Cart state persisted in localStorage
   const [cart, setCart] = useState(() => {
     try {
@@ -42,6 +67,57 @@ export const CartProvider = ({ children }) => {
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
 
+  // Customer items catalog state from /api/get_customer_items
+  const [customerItems, setCustomerItems] = useState(FOOD_ITEMS);
+  const [isLoadingCustomerItems, setIsLoadingCustomerItems] = useState(true);
+  const [itemsSource, setItemsSource] = useState('connecting');
+
+  // Fetch customer items from backend API
+  const fetchCustomerItems = async () => {
+    setIsLoadingCustomerItems(true);
+    try {
+      const endpoint = API_ENDPOINTS.GET_CUSTOMER_ITEMS || `${BACKEND_URL}/api/get_customer_items`;
+      console.log(`Connecting to customer items API: ${endpoint}`);
+
+      let response = null;
+      try {
+        response = await fetch(endpoint);
+      } catch (directErr) {
+        // Fallback to relative proxy route or singular alias
+        try {
+          response = await fetch('/api/get_customer_items');
+        } catch (proxyErr) {
+          response = await fetch('/api/get_customer_item');
+        }
+      }
+
+      if (response && response.ok) {
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.customer_items || data.items || []);
+        if (list && list.length > 0) {
+          setCustomerItems(list);
+          const sourceLabel = data.source === 'firestore' ? 'Live Firestore Database' : 'Backend Service';
+          setItemsSource(sourceLabel);
+        } else {
+          setCustomerItems(FOOD_ITEMS);
+          setItemsSource('Default Menu');
+        }
+      } else {
+        throw new Error(`HTTP ${response?.status || 'Unavailable'}`);
+      }
+    } catch (error) {
+      console.warn(`Customer items API unavailable at ${BACKEND_URL}, using fallback catalog:`, error.message);
+      setCustomerItems(FOOD_ITEMS);
+      setItemsSource(`Offline Catalog`);
+    } finally {
+      setIsLoadingCustomerItems(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomerItems();
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('cravebite_cart', JSON.stringify(cart));
@@ -57,6 +133,14 @@ export const CartProvider = ({ children }) => {
       console.error(e);
     }
   }, [favorites]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cravebite_table_number', selectedTableNumber);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [selectedTableNumber]);
 
   const showNotification = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -122,6 +206,11 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => {
     setCart([]);
     setAppliedCoupon(null);
+    try {
+      localStorage.setItem('cravebite_cart', JSON.stringify([]));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const toggleFavorite = (itemId) => {
@@ -181,28 +270,98 @@ export const CartProvider = ({ children }) => {
     showNotification('Promo code removed', 'info');
   };
 
-  const placeOrder = (orderNotes = '') => {
+  const placeOrder = async (orderNotes = '', tableNumber = selectedTableNumber) => {
     if (cart.length === 0) return;
-    const newOrder = {
-      orderId: 'CRV-' + Math.floor(100000 + Math.random() * 900000),
-      items: [...cart],
+
+    const targetTable = (tableNumber || selectedTableNumber || 'Table 1').trim();
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const generatedId = `ORD-${Math.floor(100 + Math.random() * 900)}`;
+
+    const currentCart = [...cart];
+    const currentTotal = Number(total.toFixed(2));
+
+    const orderPayload = {
+      id: generatedId,
+      tableNumber: targetTable,
+      guestCount: 2,
+      placeAt: currentTime,
+      placedAt: currentTime,
+      status: 'Pending',
+      specialInstructions: orderNotes || '',
+      notes: orderNotes || '',
+      totalAmount: currentTotal,
+      total: currentTotal,
       subtotal,
       discount,
       deliveryFee,
       tax,
-      total,
-      address: deliveryAddress,
-      notes: orderNotes,
-      status: 'confirmed', // 'confirmed', 'kitchen', 'driver', 'delivered'
-      placedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      estimatedArrival: '25-35 mins'
+      address: `Dining In: ${targetTable}`,
+      items: currentCart.map((item, idx) => ({
+        id: item.id || `item-${idx + 1}`,
+        cartItemId: item.cartItemId || `${item.id}-${idx}`,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.unitPrice ?? item.price ?? 0,
+        unitPrice: item.unitPrice ?? item.price ?? 0,
+        isVeg: Boolean(item.isVeg),
+        addons: item.selectedAddons ? item.selectedAddons.map(a => a.name) : [],
+        selectedAddons: item.selectedAddons || [],
+        itemsStatus: 'Pending',
+        itemStatus: 'Pending'
+      }))
     };
 
-    setActiveOrder(newOrder);
+    // 1. Immediately make the cart empty and close cart drawer to show customer items
     clearCart();
     setIsCartOpen(false);
-    setIsOrderTrackerOpen(true);
-    showNotification('Order placed successfully! Tracking your delivery 🚀', 'success');
+    setIsOrderTrackerOpen(false);
+
+    // 2. Trigger the backend API to register the order in database
+    try {
+      const endpoint = API_ENDPOINTS.REGISTER_ORDER || `${BACKEND_URL}/api/register_order`;
+      console.log(`Submitting order to: ${endpoint} for ${targetTable}`);
+
+      let response = null;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+      } catch (directErr) {
+        response = await fetch('/api/register_order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+      }
+
+      if (response && (response.status === 201 || response.ok)) {
+        const result = await response.json();
+        const savedOrder = result.order || orderPayload;
+        setActiveOrder({
+          ...savedOrder,
+          orderId: savedOrder.id,
+          total: savedOrder.totalAmount || savedOrder.total || currentTotal,
+          totalAmount: savedOrder.totalAmount || currentTotal,
+          estimatedArrival: '15-20 mins'
+        });
+        showNotification(`🎉 Order #${savedOrder.id} placed for ${targetTable}! Sent to kitchen.`, 'success');
+      } else {
+        throw new Error(`HTTP ${response?.status || 'Failed'}`);
+      }
+    } catch (err) {
+      console.warn('Backend unavailable, order saved in offline mode:', err.message);
+      setActiveOrder({
+        ...orderPayload,
+        orderId: orderPayload.id,
+        total: currentTotal,
+        totalAmount: currentTotal,
+        estimatedArrival: '15-20 mins',
+        isOffline: true
+      });
+      showNotification(`Order #${orderPayload.id} placed for ${targetTable}! (Backend offline - saved locally)`, 'info');
+    }
   };
 
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
@@ -247,7 +406,15 @@ export const CartProvider = ({ children }) => {
         deliveryAddress,
         setDeliveryAddress,
         toast,
-        showNotification
+        showNotification,
+        customerItems,
+        setCustomerItems,
+        isLoadingCustomerItems,
+        fetchCustomerItems,
+        itemsSource,
+        TABLE_OPTIONS,
+        selectedTableNumber,
+        setSelectedTableNumber
       }}
     >
       {children}

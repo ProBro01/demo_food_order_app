@@ -24,12 +24,13 @@ const ICON_MAP = {
 };
 
 export default function CategoryFilter() {
-  const { activeCategory, setActiveCategory } = useCart();
+  const { activeCategory, setActiveCategory, customerItems } = useCart();
+  const items = customerItems || FOOD_ITEMS;
 
   // Calculate count for each category
   const getCategoryCount = (catId) => {
-    if (catId === 'all') return FOOD_ITEMS.length;
-    return FOOD_ITEMS.filter(item => item.category === catId).length;
+    if (catId === 'all') return items.length;
+    return items.filter(item => item.category === catId).length;
   };
 
   return (
@@ -39,7 +40,7 @@ export default function CategoryFilter() {
           Explore by Category
         </h2>
         <span className="text-xs font-semibold text-slate-500">
-          {FOOD_ITEMS.length} dishes available
+          {items.length} dishes available
         </span>
       </div>
 
